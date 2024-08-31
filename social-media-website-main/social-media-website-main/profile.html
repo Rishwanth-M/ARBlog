@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mySocial - User Profile</title>
+    <!-- IconScout CDN -->
+    <link rel="stylesheet" href="https://unicons.iconscout.com/release/v2.1.6/css/unicons.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap">
+    <link rel="stylesheet" href="./profile.css">
+</head>
+<body>
+    <div class="parallax-bg">
+        <div class="layer layer-1"></div>
+        <div class="layer layer-2"></div>
+        <div class="layer layer-3"></div>
+    </div>
+
+    <nav>
+        <div class="container">
+            <h2 class="logo">𝘼𝙍 𝘽𝙡𝙤𝙜𝙜𝙞𝙣𝙜</h2>
+            
+            <div class="create">
+                <div class="profile-nav">
+                    <a href="home.html">Home</a>
+                </div>
+                <a href="create.html" class="btn btn-primary">Create</a>
+                <div class="profile-photo">
+                    <img src="" alt="AR" id="profileImage">
+                </div>
+                <div id="profileOptions" class="profile-options">
+                    <a class="profile">
+                        <div class="profile-photo">
+                            <img src="" alt="" id="profileDropdownImage">
+                        </div>
+                        <div class="handle">
+                            <h4 id="profile-name"></h4>
+                            <p id="profile-handle" class="text-muted"></p>
+                        </div>
+                    </a>
+                    <a href="profile.html">View Profile</a>
+                    <a href="login.html">Login</a>
+                    <a href="signup.html">Logout</a>
+                </div>                                  
+            </div>            
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="profile-header">
+            <div class="profile-banner">
+                <img src="" alt="Profile Banner" id="profileBanner" style="width: 100%; height: 100%; object-fit: cover;">
+                <div class="loading-spinner" id="bannerLoadingSpinner"></div>
+            </div>                                    
+            <div class="profile-info">
+                <div class="profile-photo-large">
+                    <img src="" alt="Profile Photo" id="profilePhotoLarge">
+                    <div class="loading-spinner" id="profileLoadingSpinner"></div>
+                </div>
+                <h2 id="profile-name"></h2>
+                <p id="profile-handle" class="text-muted"></p>
+                <p id="profile-bio" class="profile-bio">Loading user information...</p>
+                <a href="editProfile.html" class="btn btn-secondary">Edit Profile</a>
+                <div class="profile-stats">
+                    <div class="stat">
+                        <strong id="followersCount">0</strong>
+                        <span>Followers</span>
+                    </div>
+                    <div class="stat">
+                        <strong id="followingCount">0</strong>
+                        <span>Following</span>
+                    </div>
+                    <div class="stat">
+                        <button id="followButton" class="btn btn-primary">Follow</button>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="profile-content">
+            <div class="profile-nav">
+                <a href="#posts">Posts</a>
+            </div>
+
+            <section id="about" class="profile-section">
+                <h3>About Me</h3>
+                <p id="profile-about">I love sharing my thoughts on art, technology, and lifestyle. Join me on this journey of creativity and exploration!</p>
+            </section>
+
+            <section id="posts" class="profile-section">
+                <h3>My Posts</h3>
+                <div class="feeds"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Firebase and Custom Script -->
+    <script type="module">
+        import { auth, db } from './firebase-config.js';
+        import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    try {
+                        const profileUserId = user.uid; // Always use the logged-in user's ID
+        
+                        // Get user document from Firestore
+                        const userDocRef = doc(db, "users", profileUserId);
+                        const userDoc = await getDoc(userDocRef);
+        
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            const profilePicUrl = userData.profilePicUrl || '';
+        
+                            // Update profile picture beside the create button
+                            const profilePicSidebar = document.getElementById('profileImage');
+                            if (profilePicSidebar) {
+                                profilePicSidebar.src = `${profilePicUrl}?t=${new Date().getTime()}`;
+                            } else {
+                                console.error("Profile picture element not found!");
+                            }
+        
+                            // Update profile picture in the dropdown
+                            const profileDropdownImage = document.getElementById('profileDropdownImage');
+                            if (profileDropdownImage) {
+                                profileDropdownImage.src = `${profilePicUrl}?t=${new Date().getTime()}`;
+                            } else {
+                                console.error("Profile dropdown image element not found!");
+                            }
+                        } else {
+                            console.error("No such user document!");
+                        }
+                    } catch (error) {
+                        console.error("Error fetching user data:", error);
+                    }
+                }
+            });
+        
+            // Toggle profile options
+            const profileImage = document.getElementById('profileImage');
+            const profileDropdownImage = document.getElementById('profileDropdownImage');
+            const profileOptions = document.getElementById('profileOptions');
+        
+            const toggleProfileOptions = () => {
+                if (profileOptions.style.display === 'none' || profileOptions.style.display === '') {
+                    profileOptions.style.display = 'block';
+                } else {
+                    profileOptions.style.display = 'none';
+                }
+            };
+        
+            if (profileImage) {
+                profileImage.addEventListener('click', toggleProfileOptions);
+            } else {
+                console.error("Profile image element not found!");
+            }
+        
+            if (profileDropdownImage) {
+                profileDropdownImage.addEventListener('click', toggleProfileOptions);
+            } else {
+                console.error("Profile dropdown image element not found!");
+            }
+        
+            // Close profile options when clicking outside
+            document.addEventListener('click', (event) => {
+                if (event.target !== profileImage && event.target !== profileDropdownImage && !profileOptions.contains(event.target)) {
+                    profileOptions.style.display = 'none';
+                }
+            });
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    let profileUserId = user.uid; // Default to viewing own profile
+    
+                    // Extract UID from query parameters if viewing another user's profile
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const viewedUserUid = urlParams.get('uid');
+                    if (viewedUserUid && viewedUserUid !== user.uid) {
+                        profileUserId = viewedUserUid;
+    
+                        const editProfileButton = document.querySelector('a[href="editProfile.html"]');
+                        const followButton = document.getElementById('followButton');
+    
+                        // Hide edit button and show follow button if viewing another user's profile
+                        if (editProfileButton) {
+                            editProfileButton.style.display = 'none';
+                        }
+                        if (followButton) {
+                            followButton.style.display = 'block';
+                        }
+                    } else {
+                        // Viewing own profile
+                        const followButton = document.getElementById('followButton');
+                        if (followButton) {
+                            followButton.style.display = 'none';
+                        }
+                    }
+    
+                    // Fetch and display user data
+                    const userDocRef = doc(db, "users", profileUserId);
+                    const userDoc = await getDoc(userDocRef);
+    
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        const profilePicUrl = userData.profilePicUrl || '';
+    
+                        // Set profile image
+                        const profileImage = document.getElementById('profilePhotoLarge');
+                        if (profileImage) {
+                            profileImage.src = `${profilePicUrl}?t=${new Date().getTime()}`;
+                        }
+    
+                        // Update other elements
+                        const profileName = document.getElementById('profile-name');
+                        const profileHandle = document.getElementById('profile-handle');
+                        const profileBio = document.getElementById('profile-bio');
+    
+                        if (profileName) profileName.textContent = userData.fullname;
+                        if (profileHandle) profileHandle.textContent = `@${userData.username}`;
+                        if (profileBio) profileBio.innerHTML = `<strong>${userData.fullname}</strong><br>${userData.bio}`;
+    
+                        // Update profile picture and banner with loading states
+                        if (userData.profilePicUrl) {
+                            updateProfileImage(userData.profilePicUrl);
+                        }
+                        if (userData.bannerPicUrl) {
+                            updateBanner(userData.bannerPicUrl);
+                        }
+    
+                        // Load posts and gallery
+                        loadPosts(profileUserId, profilePicUrl);
+    
+                        // Update followers and following count
+                        if (document.getElementById('followersCount')) {
+                            document.getElementById('followersCount').textContent = userData.followers?.length || 0;
+                        }
+                        if (document.getElementById('followingCount')) {
+                            document.getElementById('followingCount').textContent = userData.following?.length || 0;
+                        }
+                    } else {
+                        console.error("No such user document!");
+                    }
+                } else {
+                    const profileOptions = document.getElementById('profileOptions');
+                    if (profileOptions) {
+                        profileOptions.style.display = 'none';
+                    }
+                }
+            });
+    
+            // Update banner and profile picture
+            function updateBanner(url) {
+                const banner = document.getElementById('profileBanner');
+                const spinner = document.getElementById('bannerLoadingSpinner');
+    
+                if (banner && spinner) {
+                    spinner.style.display = 'block';
+                    banner.style.display = 'none';
+    
+                    const img = new Image();
+                    img.src = `${url}?t=${new Date().getTime()}`;
+                    img.onload = () => {
+                        banner.src = img.src;
+                        banner.style.display = 'block';
+                        spinner.style.display = 'none';
+                    };
+                    img.onerror = () => {
+                        console.error('Failed to load banner image');
+                        spinner.style.display = 'none';
+                    };
+                }
+            }
+    
+            function updateProfileImage(url) {
+                const profileImage = document.getElementById('profilePhotoLarge');
+                const spinner = document.getElementById('profileLoadingSpinner');
+    
+                if (profileImage && spinner) {
+                    spinner.style.display = 'block';
+                    profileImage.style.display = 'none';
+    
+                    const img = new Image();
+                    img.src = `${url}?t=${new Date().getTime()}`;
+                    img.onload = () => {
+                        profileImage.src = img.src;
+                        profileImage.style.display = 'block';
+                        spinner.style.display = 'none';
+                    };
+                    img.onerror = () => {
+                        console.error('Failed to load profile image');
+                        spinner.style.display = 'none';
+                    };
+                }
+            }
+    
+            // Load user posts
+            function loadPosts(userId, profilePicUrl) {
+                const userPostsRef = collection(db, 'users', userId, 'posts');
+                const q = query(userPostsRef, orderBy('timestamp', 'desc'));
+    
+                onSnapshot(q, (snapshot) => {
+                    const feedsContainer = document.querySelector('.feeds');
+                    if (feedsContainer) {
+                        feedsContainer.innerHTML = '';
+                        snapshot.forEach(doc => {
+                            renderPost(doc, profilePicUrl);
+                        });
+                    }
+                });
+            }
+    
+            function renderPost(doc, profilePicUrl) {
+                const feedsContainer = document.querySelector('.feeds');
+                if (feedsContainer) {
+                    const post = `
+                        <div class="feed" data-id="${doc.id}" data-owner-id="${doc.data().ownerId}">
+                            <div class="head">
+                                <div class="user">
+                                    <div class="profile-photo">
+                                        <img src="${profilePicUrl}?t=${new Date().getTime()}" alt="Profile Picture">
+                                    </div>
+                                    <div class="info">
+                                        <h3>${doc.data().username || "User"}</h3>
+                                    </div>
+                                </div>
+                                <span class="edit">
+                                    <i class="uil uil-ellipsis-h"></i>
+                                </span>
+                            </div>
+                            <div class="photo">
+                                <img src="${doc.data().imageUrl}" alt="Posted Image">
+                            </div>
+                            <div class="action-buttons">
+                                <div class="interaction-buttons">
+                                    <span class="like-button">
+                                        <i class="uil uil-heart"></i>
+                                        <span class="like-count">${doc.data().likes || 0}</span>
+                                    </span>
+                                    <span><i class="uil uil-comment-dots"></i></span>
+                                    <span><i class="uil uil-share-alt"></i></span>
+                                </div>
+                                <div class="bookmark">
+                                    <span><i class="uil uil-bookmark-full"></i></span>
+                                </div>
+                            </div>
+                            <div class="caption">
+                                <p><b>${doc.data().username || "User"}</b> ${doc.data().caption} <span class="harsh-tag">#yourHashtag</span></p>
+                            </div>
+                            <div class="comments text-muted">
+                                View all comments
+                            </div>
+                            <small>${new Date(doc.data().timestamp?.seconds * 1000).toLocaleTimeString()}</small>
+                        </div>
+                    `;
+            
+                    feedsContainer.insertAdjacentHTML('afterbegin', post);
+            
+                    // Add event listener for the like button
+                    const likeButton = feedsContainer.querySelector(`[data-id="${doc.id}"] .like-button`);
+                    likeButton.addEventListener('click', () => handleLike(doc.id, doc.data().ownerId));
+                }
+            }
+            
+               
+            async function handleLike(postId, ownerId) {
+                console.log(`Handling like for postId: ${postId}`);
+                const likeButton = document.querySelector(`[data-id="${postId}"] .like-button`);
+                const likeCountElement = likeButton.querySelector('.like-count');
+                const userId = auth.currentUser.uid;
+                console.log(`Current userId: ${userId}`);
+            
+                // Reference to the post document in the original post owner's subcollection
+                const postRef = doc(db, 'users', ownerId, 'posts', postId);
+            
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const postDoc = await transaction.get(postRef);
+                        console.log(`Post document exists: ${postDoc.exists()}`);
+            
+                        if (!postDoc.exists()) {
+                            throw new Error("Document does not exist!");
+                        }
+            
+                        const postData = postDoc.data();
+                        const likedUsers = postData.likedUsers || [];
+                        const isLiked = likedUsers.includes(userId);
+            
+                        let newLikeCount = postData.likes || 0;
+            
+                        if (isLiked) {
+                            // Unlike the post
+                            transaction.update(postRef, {
+                                likedUsers: likedUsers.filter(id => id !== userId),
+                                likes: newLikeCount - 1
+                            });
+                            newLikeCount--;
+                        } else {
+                            // Like the post
+                            transaction.update(postRef, {
+                                likedUsers: [...likedUsers, userId],
+                                likes: newLikeCount + 1
+                            });
+                            newLikeCount++;
+                        }
+            
+                        // Update the local UI with the new like count
+                        likeCountElement.textContent = newLikeCount;
+                        likeButton.classList.toggle('liked', !isLiked);
+            
+                        console.log('Like count updated successfully:', newLikeCount);
+                    });
+                } catch (error) {
+                    console.error('Error updating like status:', error);
+                }
+            }
+            
+
+// Follow/Unfollow logic
+const followButton = document.getElementById('followButton');
+if (followButton) {
+    followButton.addEventListener('click', async () => {
+        const user = auth.currentUser;
+        if (user) {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+            const userData = userDoc.data();
+
+            if (userData.followers && userData.followers.includes(auth.currentUser.uid)) {
+                // Unfollow logic
+                await updateDoc(userDocRef, {
+                    followers: userData.followers.filter(follower => follower !== auth.currentUser.uid)
+                });
+                followButton.textContent = 'Follow';
+            } else {
+                // Follow logic
+                await updateDoc(userDocRef, {
+                    followers: [...(userData.followers || []), auth.currentUser.uid]
+                });
+                followButton.textContent = 'Unfollow';
+            }
+        }
+    });
+}
+
+        });
+    </script>
+    
+</body>
+</html>
