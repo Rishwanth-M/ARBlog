@@ -67,11 +67,11 @@
         const cropImage = document.getElementById('cropImage');
         const cropButton = document.getElementById('cropButton');
         const cancelCropButton = document.getElementById('cancelCropButton');
-
+    
         let cropper;
         let currentFileInput;
         let isProfilePic;
-
+    
         const resetCropper = () => {
             if (cropper) {
                 cropper.destroy();
@@ -82,7 +82,7 @@
             isProfilePic = false;
             cropModal.style.display = 'none';
         };
-
+    
         const showCropper = (input, isProfile) => {
             const file = input.files[0];
             if (file) {
@@ -100,30 +100,47 @@
                 isProfilePic = isProfile;
             }
         };
-
+    
         profilePicInput.addEventListener('change', () => {
             resetCropper();
             showCropper(profilePicInput, true);
         });
-
+    
         bannerPicInput.addEventListener('change', () => {
             resetCropper();
             showCropper(bannerPicInput, false);
         });
-
+    
         cropButton.addEventListener('click', async () => {
+            if (!cropper || !currentFileInput) {
+                alert('No image to crop or file input is not available.');
+                return;
+            }
+        
             const canvas = cropper.getCroppedCanvas({
                 width: isProfilePic ? 300 : 1280,
                 height: isProfilePic ? 300 : 720,
             });
+        
             canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    alert('Failed to crop the image. Please try again.');
+                    return;
+                }
+        
                 const file = new File([blob], currentFileInput.files[0].name, { type: 'image/jpeg' });
                 const storageRef = ref(storage, `${isProfilePic ? 'profile_pics' : 'banner_pics'}/${auth.currentUser.uid}/${file.name}`);
+        
                 try {
                     await uploadBytes(storageRef, file);
                     const downloadURL = await getDownloadURL(storageRef);
-                    currentFileInput.setAttribute('data-url', downloadURL);
-                    alert('Image uploaded and cropped successfully!');
+        
+                    if (currentFileInput) {
+                        currentFileInput.setAttribute('data-url', downloadURL);
+                    } else {
+                        console.error("Error: currentFileInput is null.");
+                    }
+        
                     resetCropper();
                 } catch (error) {
                     console.error("Error uploading cropped image: ", error);
@@ -131,13 +148,14 @@
                 }
             });
         });
-
+        
+    
         cancelCropButton.addEventListener('click', resetCropper);
-
+    
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDocRef = doc(db, "users", user.uid);
-
+    
                 // Load the current profile data
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
@@ -146,34 +164,33 @@
                     usernameInput.value = userData.username || '';
                     bioInput.value = userData.bio || '';
                     aboutInput.value = userData.about || '';
-                    // If there's an existing profile picture, display it
+                    // Set the current profile and banner picture URLs
                     if (userData.profilePicUrl) {
                         profilePicInput.setAttribute('data-url', userData.profilePicUrl);
                     }
-                    // If there's an existing banner picture, display it
                     if (userData.bannerPicUrl) {
                         bannerPicInput.setAttribute('data-url', userData.bannerPicUrl);
                     }
                 } else {
                     console.error("User document does not exist!");
                 }
-
+    
                 // Handle form submission
                 editProfileForm.addEventListener('submit', async (event) => {
                     event.preventDefault();
-
+    
                     // Fetch existing data to update only changed fields
                     const existingData = userDoc.data();
                     const updatedData = {
                         fullname: fullnameInput.value,
-                        username: usernameInput.value ,
+                        username: usernameInput.value,
                         bio: bioInput.value,
                         about: aboutInput.value,
                         profilePicUrl: profilePicInput.getAttribute('data-url'),
-                        bannerPicUrl: bannerPicInput.getAttribute('data-url') ,
+                        bannerPicUrl: bannerPicInput.getAttribute('data-url'),
                     };
-
-                    // Handle deletion of old profile and banner pictures
+    
+                    // Handle deletion of old profile picture
                     if (existingData.profilePicUrl && updatedData.profilePicUrl !== existingData.profilePicUrl) {
                         const oldProfilePicRef = ref(storage, existingData.profilePicUrl);
                         try {
@@ -182,7 +199,8 @@
                             console.error("Error deleting old profile picture: ", error);
                         }
                     }
-
+    
+                    // Handle deletion of old banner picture
                     if (existingData.bannerPicUrl && updatedData.bannerPicUrl !== existingData.bannerPicUrl) {
                         const oldBannerPicRef = ref(storage, existingData.bannerPicUrl);
                         try {
@@ -191,7 +209,7 @@
                             console.error("Error deleting old banner picture: ", error);
                         }
                     }
-
+    
                     try {
                         await updateDoc(userDocRef, updatedData);
                         alert('Profile updated successfully!');
@@ -206,6 +224,7 @@
             }
         });
     });
+    
 </script>
 
     
