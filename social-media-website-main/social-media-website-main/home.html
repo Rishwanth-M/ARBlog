@@ -82,14 +82,15 @@
                     </div>
                       
                     <a class="menu-item" id="notifications">
-                        <span><i class="uil uil-bell"><small class="notification-count">9+</small></i></span>
+                        <span><i class="uil uil-bell"><small class="notification-count" style="display:none;">0</small></i></span>
                         <h3>Notification</h3>
                         <!--------------- NOTIFICATION POPUP --------------->
-                        <div class="notifications-popup" style="display: none;">
-                            <!-- Notifications will be dynamically inserted here -->
+                        <div class="notifications-popup">
+                            <!-- Notifications will be dynamically added here -->
                         </div>
                         <!--------------- END NOTIFICATION POPUP --------------->
                     </a>
+                    
                     
                     <a class="menu-item" id="messages-notifications">
                         <span><i class="uil uil-envelope-alt"><small class="notification-count">6</small></i></span>
@@ -230,84 +231,97 @@
         document.addEventListener('DOMContentLoaded', function() {
             const notificationIcon = document.getElementById('notifications');
             const notificationsPopup = document.querySelector('.notifications-popup');
-    
+            const notificationCount = document.querySelector('.notification-count'); // Element to display the count
+        
             notificationIcon.addEventListener('click', function() {
                 const isVisible = notificationsPopup.style.display === 'block';
-                notificationsPopup.style.display = isVisible ? 'none' : 'block';
+                if (isVisible) {
+                    // Hide notifications popup and clear content
+                    notificationsPopup.style.display = 'none';
+                    notificationsPopup.innerHTML = ''; // Clear the notifications content
+                    resetNotificationCount(); // Reset the count to 0
+                } else {
+                    // Show notifications popup
+                    notificationsPopup.style.display = 'block';
+                    // Fetch and display new notifications
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            const userId = user.uid;
+                            fetchNotifications(userId); // Fetch and display new notifications
+                        }
+                    });
+                }
             });
-    
+        
             document.addEventListener('click', function(event) {
                 if (!notificationIcon.contains(event.target) && !notificationsPopup.contains(event.target)) {
                     notificationsPopup.style.display = 'none';
+                    notificationsPopup.innerHTML = ''; // Clear the notifications content
+                    resetNotificationCount(); // Reset the count to 0
                 }
             });
-    
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    const userId = user.uid;
-    
-                    // Fetch and display notifications
-                    fetchNotifications(userId);
-                }
-            });
-    
+        
             async function fetchNotifications(userId) {
-                // Reference to the user's document
                 const userRef = doc(db, 'users', userId);
-    
+        
                 try {
-                    // Fetch user data
                     const userDoc = await getDoc(userRef);
                     const userData = userDoc.data();
-    
+        
                     if (userData) {
-                        // Clear existing notifications
-                        notificationsPopup.innerHTML = '';
-    
+                        let count = 0; // Notification count
+        
                         // Process followers
                         if (userData.followers) {
-                            userData.followers.forEach(async (followerId) => {
+                            for (const followerId of userData.followers) {
                                 const followerRef = doc(db, 'users', followerId);
                                 const followerDoc = await getDoc(followerRef);
                                 const followerData = followerDoc.data();
                                 addNotification(followerData.fullname, 'started following you', followerData.profilePicUrl, 'Just Now');
-                            });
+                                count++;
+                            }
                         }
-    
+        
                         // Process likes
                         const postsRef = collection(db, 'users', userId, 'posts');
                         const postsQuery = query(postsRef);
                         const postsSnapshot = await getDocs(postsQuery);
-    
-                        postsSnapshot.forEach(async (postDoc) => {
+        
+                        for (const postDoc of postsSnapshot.docs) {
                             const postData = postDoc.data();
-                            if (postData.likes) {
-                                postData.likes.forEach(async (likeId) => {
+                            if (postData.likedUsers) {
+                                for (const likeId of postData.likedUsers) {
                                     const likerRef = doc(db, 'users', likeId);
                                     const likerDoc = await getDoc(likerRef);
                                     const likerData = likerDoc.data();
                                     addNotification(likerData.fullname, 'liked your post', likerData.profilePicUrl, 'Just Now');
-                                });
+                                    count++;
+                                }
                             }
-                        });
-    
+                        }
+        
                         // Process following
                         if (userData.following) {
-                            userData.following.forEach(async (followingId) => {
+                            for (const followingId of userData.following) {
                                 const followingRef = doc(db, 'users', followingId);
                                 const followingDoc = await getDoc(followingRef);
                                 const followingData = followingDoc.data();
-                                addNotification(followingData.fullname, 'started following you', followingData.profilePiUrl, 'Just Now');
-                            });
+                                addNotification(followingData.fullname, 'started following you', followingData.profilePicUrl, 'Just Now');
+                                count++;
+                            }
                         }
+        
+                        // Update notification count
+                        updateNotificationCount(count);
                     }
                 } catch (error) {
                     console.error('Error fetching notifications:', error);
                 }
             }
-    
+        
             function addNotification(userName, action, profilePicUrl, timeAgo) {
                 const notificationElement = document.createElement('div');
+                notificationElement.className = 'notification-item'; // Added class for styling
                 notificationElement.innerHTML = `
                     <div class="profile-photo">
                         <img src="${profilePicUrl || './images/default-profile.jpg'}" alt="Profile Picture">
@@ -319,8 +333,22 @@
                 `;
                 notificationsPopup.prepend(notificationElement);
             }
+        
+            function updateNotificationCount(count) {
+                if (count > 0) {
+                    notificationCount.textContent = count;
+                    notificationCount.style.display = 'inline'; // Show the count
+                } else {
+                    notificationCount.style.display = 'none'; // Hide if no notifications
+                }
+            }
+        
+            function resetNotificationCount() {
+                notificationCount.textContent = '0';
+            }
         });
-
+        
+        
 
 
 
