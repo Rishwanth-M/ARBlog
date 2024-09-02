@@ -180,7 +180,7 @@
 
     <script type="module">
         import { auth, db } from './firebase-config.js';
-        import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+        import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc, getDocs, runTransaction, addDoc, serverTimestamp  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     
         // Profile dropdown toggle
@@ -509,8 +509,15 @@ function renderPost(doc, profilePicUrl) {
                 <div class="caption">
                     <p><b>${doc.data().username || "User"}</b> ${doc.data().caption} <span class="harsh-tag">#yourHashtag</span></p>
                 </div>
-                <div class="comments text-muted">
-                    View all comments
+                <div class="comments-section">
+                    <button class="view-comments-btn text-muted">View all comments</button>
+                    <div class="comments text-muted hidden">
+                        <!-- Comments will be dynamically loaded here -->
+                    </div>
+                    <div class="add-comment">
+                        <input type="text" placeholder="Add a comment..." class="comment-input">
+                        <button class="post-comment-btn">Post Comment</button>
+                    </div>
                 </div>
                 <small>${new Date(doc.data().timestamp?.seconds * 1000).toLocaleTimeString()}</small>
             </div>
@@ -521,13 +528,78 @@ function renderPost(doc, profilePicUrl) {
         // Add event listener for the like button
         const likeButton = feedsContainer.querySelector(`[data-id="${doc.id}"] .like-button`);
         likeButton.addEventListener('click', () => handleLike(doc.id, doc.data().ownerId));
+
+        // Add event listener for the post comment button
+        const postCommentBtn = feedsContainer.querySelector(`[data-id="${doc.id}"] .post-comment-btn`);
+        const commentInput = feedsContainer.querySelector(`[data-id="${doc.id}"] .comment-input`);
+        postCommentBtn.addEventListener('click', () => handleComment(doc.id, doc.data().ownerId, commentInput.value));
+
+        // Add event listener for the view comments button
+        const viewCommentsBtn = feedsContainer.querySelector(`[data-id="${doc.id}"] .view-comments-btn`);
+        viewCommentsBtn.addEventListener('click', () => toggleComments(doc.id));
+
+        
     }
-    function redirectUser(ownerId){
-        retur
+}
+
+function toggleComments(postId) {
+    const commentsSection = document.querySelector(`[data-id="${postId}"] .comments`);
+    const viewCommentsBtn = document.querySelector(`[data-id="${postId}"] .view-comments-btn`);
+    const ownerId = document.querySelector(`[data-id="${postId}"]`).getAttribute('data-owner-id');
+    
+    if (commentsSection.classList.contains('hidden')) {
+        loadComments(postId, ownerId); // Pass ownerId to loadComments
+        commentsSection.classList.remove('hidden');
+        viewCommentsBtn.textContent = 'Hide comments';
+    } else {
+        commentsSection.classList.add('hidden');
+        viewCommentsBtn.textContent = 'View all comments';
     }
 }
 
 
+async function handleComment(postId, ownerId, comment) {
+    if (comment.trim() === "") return;
+
+    try {
+        const commentsRef = collection(db, 'users', ownerId, 'posts', postId, 'comments');
+        await addDoc(commentsRef, {
+            username: "currentUser", // Replace with the actual username of the commenter
+            comment: comment,
+            timestamp: serverTimestamp()
+        });
+
+        console.log('Comment added successfully');
+    } catch (error) {
+        console.error('Error adding comment: ', error);
+    }
+}
+
+
+
+async function loadComments(postId, ownerId) {
+    const commentsSection = document.querySelector(`[data-id="${postId}"] .comments`);
+    if (!commentsSection) return;
+
+    try {
+        const commentsQuery = query(
+            collection(db, 'users', ownerId, 'posts', postId, 'comments'),
+            orderBy('timestamp', 'asc')
+        );
+
+        const querySnapshot = await getDocs(commentsQuery);
+        commentsSection.innerHTML = ''; // Clear any existing comments
+
+        querySnapshot.forEach(doc => {
+            const comment = doc.data();
+            const commentElement = document.createElement('p');
+            commentElement.innerHTML = `<b>${comment.username}:</b> ${comment.comment}`;
+            commentsSection.appendChild(commentElement);
+        });
+    } catch (error) {
+        console.error('Error loading comments: ', error);
+    }
+}
         
            
         async function handleLike(postId, ownerId) {
