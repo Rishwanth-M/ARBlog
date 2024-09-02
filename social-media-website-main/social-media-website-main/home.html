@@ -81,68 +81,16 @@
                         </div>
                     </div>
                       
-                    <a class="menu-item"  id="notifications">
+                    <a class="menu-item" id="notifications">
                         <span><i class="uil uil-bell"><small class="notification-count">9+</small></i></span>
                         <h3>Notification</h3>
                         <!--------------- NOTIFICATION POPUP --------------->
-                        <div class="notifications-popup">
-                            <div>
-                                <div class="profile-photo">
-                                    <img src="./images/profile-2.jpg">
-                                </div>
-                                <div class="notification-body">
-                                    <b>Keke Benjamin</b> accepted your friend request
-                                    <small class="text-muted">2 Days Ago</small>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="profile-photo">
-                                    <img src="./images/profile-3.jpg">
-                                </div>
-                                <div class="notification-body">
-                                    <b>John Doe</b> commented on your post
-                                    <small class="text-muted">1 Hour Ago</small>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="profile-photo">
-                                    <img src="./images/profile-4.jpg">
-                                </div>
-                                <div class="notification-body">
-                                    <b>Marry Oppong</b> and <b>283 Others</b> liked your post
-                                    <small class="text-muted">4 Minutes Ago</small>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="profile-photo">
-                                    <img src="./images/profile-5.jpg">
-                                </div>
-                                <div class="notification-body">
-                                    <b>Doris Y. Lartey</b> commented on a post you are tagged in
-                                    <small class="text-muted">2 Days Ago</small>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="profile-photo">
-                                    <img src="./images/profile-6.jpg">
-                                </div>
-                                <div class="notification-body">
-                                    <b>Keyley Jenner</b> commented on a post you are tagged in
-                                    <small class="text-muted">1 Hour Ago</small>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="profile-photo">
-                                    <img src="./images/profile-7.jpg">
-                                </div>
-                                <div class="notification-body">
-                                    <b>Jane Doe</b> commented on your post
-                                    <small class="text-muted">1 Hour Ago</small>
-                                </div>
-                            </div>
+                        <div class="notifications-popup" style="display: none;">
+                            <!-- Notifications will be dynamically inserted here -->
                         </div>
                         <!--------------- END NOTIFICATION POPUP --------------->
                     </a>
+                    
                     <a class="menu-item" id="messages-notifications">
                         <span><i class="uil uil-envelope-alt"><small class="notification-count">6</small></i></span>
                         <h3>Messages</h3>
@@ -279,6 +227,102 @@
             }
         });
 
+        document.addEventListener('DOMContentLoaded', function() {
+            const notificationIcon = document.getElementById('notifications');
+            const notificationsPopup = document.querySelector('.notifications-popup');
+    
+            notificationIcon.addEventListener('click', function() {
+                const isVisible = notificationsPopup.style.display === 'block';
+                notificationsPopup.style.display = isVisible ? 'none' : 'block';
+            });
+    
+            document.addEventListener('click', function(event) {
+                if (!notificationIcon.contains(event.target) && !notificationsPopup.contains(event.target)) {
+                    notificationsPopup.style.display = 'none';
+                }
+            });
+    
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    const userId = user.uid;
+    
+                    // Fetch and display notifications
+                    fetchNotifications(userId);
+                }
+            });
+    
+            async function fetchNotifications(userId) {
+                // Reference to the user's document
+                const userRef = doc(db, 'users', userId);
+    
+                try {
+                    // Fetch user data
+                    const userDoc = await getDoc(userRef);
+                    const userData = userDoc.data();
+    
+                    if (userData) {
+                        // Clear existing notifications
+                        notificationsPopup.innerHTML = '';
+    
+                        // Process followers
+                        if (userData.followers) {
+                            userData.followers.forEach(async (followerId) => {
+                                const followerRef = doc(db, 'users', followerId);
+                                const followerDoc = await getDoc(followerRef);
+                                const followerData = followerDoc.data();
+                                addNotification(followerData.fullname, 'started following you', followerData.profilePicUrl, 'Just Now');
+                            });
+                        }
+    
+                        // Process likes
+                        const postsRef = collection(db, 'users', userId, 'posts');
+                        const postsQuery = query(postsRef);
+                        const postsSnapshot = await getDocs(postsQuery);
+    
+                        postsSnapshot.forEach(async (postDoc) => {
+                            const postData = postDoc.data();
+                            if (postData.likes) {
+                                postData.likes.forEach(async (likeId) => {
+                                    const likerRef = doc(db, 'users', likeId);
+                                    const likerDoc = await getDoc(likerRef);
+                                    const likerData = likerDoc.data();
+                                    addNotification(likerData.fullname, 'liked your post', likerData.profilePicUrl, 'Just Now');
+                                });
+                            }
+                        });
+    
+                        // Process following
+                        if (userData.following) {
+                            userData.following.forEach(async (followingId) => {
+                                const followingRef = doc(db, 'users', followingId);
+                                const followingDoc = await getDoc(followingRef);
+                                const followingData = followingDoc.data();
+                                addNotification(followingData.fullname, 'started following you', followingData.profilePiUrl, 'Just Now');
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching notifications:', error);
+                }
+            }
+    
+            function addNotification(userName, action, profilePicUrl, timeAgo) {
+                const notificationElement = document.createElement('div');
+                notificationElement.innerHTML = `
+                    <div class="profile-photo">
+                        <img src="${profilePicUrl || './images/default-profile.jpg'}" alt="Profile Picture">
+                    </div>
+                    <div class="notification-body">
+                        <b>${userName}</b> ${action}
+                        <small class="text-muted">${timeAgo}</small>
+                    </div>
+                `;
+                notificationsPopup.prepend(notificationElement);
+            }
+        });
+
+
+
 
         // Function to update profile options based on login status
 function updateProfileOptions() {
@@ -411,7 +455,7 @@ function renderPost(doc, profilePicUrl) {
                             <img src="${profilePicUrl}?t=${new Date().getTime()}" alt="Profile Picture">
                         </div>
                         <div class="info">
-                            <a href="/ARBlog-main/social-media-website-main/social-media-website-main/profile.html?uid=${doc.data().ownerId}">${doc.data().username || "User"}</a>
+                            <a href="/social-media-website-main/profile.html?uid=${doc.data().ownerId}">${doc.data().username || "User"}</a>
                         </div>
                     </div>
                     <span class="edit">
@@ -455,7 +499,6 @@ function renderPost(doc, profilePicUrl) {
     }
 }
 
-        
 
         
            
