@@ -342,8 +342,7 @@ updateProfileOptions(); // Ensure it's also run on page load
 
 
     
-        // Load user posts
-        function loadPosts(userId, profilePicUrl) {
+function loadPosts(userId) {
     const userRef = doc(db, 'users', userId);
 
     getDoc(userRef).then((userSnapshot) => {
@@ -376,9 +375,28 @@ updateProfileOptions(); // Ensure it's also run on page load
 
             // Render all posts
             allPosts.forEach((doc) => {
-                renderPost(doc, profilePicUrl);
+                const ownerId = doc.data().ownerId; // Get the owner ID of the post
+                getOwnerProfilePic(ownerId).then(profilePicUrl => {
+                    renderPost(doc, profilePicUrl);
+                });
             });
         });
+    });
+}
+
+function getOwnerProfilePic(ownerId) {
+    const userRef = doc(db, 'users', ownerId);
+
+    return getDoc(userRef).then((userDoc) => {
+        if (userDoc.exists()) {
+            return userDoc.data().profilePicUrl || 'default-profile-pic.jpg';  // Return profile picture URL or default
+        } else {
+            console.error("User document does not exist!");
+            return 'default-profile-pic.jpg'; // Return default image if user doesn't exist
+        }
+    }).catch((error) => {
+        console.error("Error fetching user profile picture: ", error);
+        return 'default-profile-pic.jpg'; // Return default image in case of an error
     });
 }
 
@@ -393,7 +411,7 @@ function renderPost(doc, profilePicUrl) {
                             <img src="${profilePicUrl}?t=${new Date().getTime()}" alt="Profile Picture">
                         </div>
                         <div class="info">
-                            <h3>${doc.data().username || "User"}</h3>
+                            <a href="/ARBlog-main/social-media-website-main/social-media-website-main/profile.html?uid=${doc.data().ownerId}">${doc.data().username || "User"}</a>
                         </div>
                     </div>
                     <span class="edit">
@@ -432,7 +450,12 @@ function renderPost(doc, profilePicUrl) {
         const likeButton = feedsContainer.querySelector(`[data-id="${doc.id}"] .like-button`);
         likeButton.addEventListener('click', () => handleLike(doc.id, doc.data().ownerId));
     }
+    function redirectUser(ownerId){
+        retur
+    }
 }
+
+        
 
         
            
