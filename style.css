@@ -529,7 +529,7 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background: linear-gradient(135deg, #7a7272, #000000);
+    background: linear-gradient(135deg, #000000, #000000);
 }
 
 .container {
