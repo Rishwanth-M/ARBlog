@@ -495,7 +495,7 @@
 
                 <script type="module">
                     import { db } from "./firebase-config.js";
-                    import { collection, doc, getDoc, query, where, getDocs, setDoc, deleteDoc} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+                    import { collection, doc, getDoc, query, where, getDocs, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
                     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
                 
                     const auth = getAuth();
@@ -599,7 +599,7 @@
             deleteButton.className = 'delete-btn';
             deleteButton.addEventListener('click', async (event) => {
                 event.stopPropagation(); // Prevent event from bubbling up
-                if (confirm("Do you want to delete this chat permanently?")) {
+                if (confirm("Would you like to delete this chat feed? (The chat will be shown again when you open it.)")) {
                     try {
                         // Retrieve current user document
                         const currentUserDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
@@ -716,19 +716,27 @@ async function openChat(chatId, username) {
 
 async function loadMessages(chatId) {
     const messagesRef = collection(db, 'chats', chatId, 'messages'); // Reference to chat messages
+    const currentUsername = await getCurrentUsername(); // Retrieve current username
 
     try {
-        const querySnapshot = await getDocs(messagesRef);
-        const currentUsername = await getCurrentUsername(); // Retrieve current username outside of the loop
+        // Use Firestore's real-time listener to fetch messages
+        onSnapshot(messagesRef, (snapshot) => {
+            const messagesContainer = document.getElementById('messages-container');
+            messagesContainer.innerHTML = ''; // Clear previous messages to avoid duplication
+            
+            snapshot.forEach(doc => {
+                const messageData = doc.data();
+                displayMessage(messageData.text, messageData.sender === currentUsername); // Compare sender with currentUsername
+            });
 
-        querySnapshot.forEach(doc => {
-            const messageData = doc.data();
-            displayMessage(messageData.text, messageData.sender === currentUsername); // Compare sender with currentUsername
+            // Automatically scroll to the bottom of the messages container
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         });
     } catch (error) {
         console.error("Error loading messages:", error);
     }
 }
+
 
 
 async function getCurrentUsername() {
