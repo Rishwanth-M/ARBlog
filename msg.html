@@ -140,6 +140,7 @@
             align-items: center;
             margin: 10px 0;
             cursor: pointer; /* Cursor to indicate it's clickable */
+            background-color: #888f8f;
         }
 
         .profile-photo img {
@@ -292,18 +293,15 @@
 </style>
 <body>
     <nav>
-        <div class="container">
-            <h2 class="logo">𝘼𝙍 𝘽𝙡𝙤𝙜𝙜𝙞𝙣𝙜</h2>
-            
-            <div class="create">
-                
+        <div class="container" style="max-width: 800px; margin: 0 auto; padding: 10px;">
+            <h2 class="logo" style="font-size: 1.5em;">𝘼𝙍 𝘽𝙡𝙤𝙜𝙜𝙞𝙣𝙜</h2>
+            <div class="create" style="display: flex; align-items: center; gap: 10px;">
                 <div class="profile-nav">
-                
                     <a href="home.html">Home</a>
                 </div>
-                <a href="create.html" class="btn btn-primary">Create</a>
-                <div class="profile-photo">
-                    <img src="" alt="Profile Photo" id="profileImage">
+                <a href="create.html" class="btn btn-primary" style="padding: 5px 10px;">Create</a>
+                <div class="profile-photo" style="width: 40px; height: 40px; overflow: hidden; border-radius: 50%;">
+                    <img src="" alt="Profile Photo" id="profileImage" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
                 <div id="profileOptions" class="profile-options" style="display: none;">
                     <a class="profile">
@@ -319,179 +317,140 @@
                     <a href="login.html" id="loginOption">Login</a>
                     <a href="signup.html" id="signupOption">Sign Up</a>
                     <a href="#" id="logoutOption" style="display: none;">Logout</a>
-                </div>                                  
-            </div>            
+                </div>
+            </div>
         </div>
     </nav>
+    
+    <div class="right" style="max-width: 800px; margin: 0 auto; padding: 10px;">
+        <div class="messages" style="background: #888f8f; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+            <div class="heading" style="margin-bottom: 10px;">
+                <h4 style="margin: 0;">Messages</h4>
+            </div>
+            <div class="search-bar" style="display: flex; gap: 5px; margin-bottom: 10px;border-radius: 0%;">
+                <i class="uil uil-search" style="align-self: center;"></i>
+                <input type="search" placeholder="Search messages" id="message-search" style="flex: 1; padding: 5px; border: 1px solid #ccc; border-radius: 5px;">
+                <div id="suggestionsContainer1" class="suggestions-container"></div>
+            </div>
+    
+            <div class="category" style="margin-bottom: 10px;">
+                <h3 class="active" style="margin: 0; font-size: 1.1em;">CHAT BOX</h3>
+            </div>
+    
+            <div id="selected-user" style="display: none; margin-bottom: 10px;">
+                <div class="profile-photo" style="width: 40px; height: 40px; overflow: hidden; border-radius: 50%; margin-right: 10px;">
+                    <img id="selected-user-img" src="./images/profile-9.jpg" alt="Profile Picture" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div class="message-body">
+                    <h5 id="selected-user-name" style="margin: 0; font-size: 1em;">Username</h5>
+                </div>
+                <button id="delete-convo-btn" class="delete-btn" style="padding: 5px 10px; font-size: 0.9em;">Delete</button>
+            </div>
+    
+            <div id="selected-users" style="margin-bottom: 10px;"></div>
+    
+            <div id="chat-interface" style="
+                display: none;
+                width: 100%;
+                max-width: 600px;
+                margin: 0 auto;
+                background-color: #f4f4f9;
+                border: 1px solid #ddd;
+                border-radius: 10px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            ">
+                <div id="chat-header" style="
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    position: relative;
+                    background-color: #4a76a8;
+                    padding: 15px;
+                    border-radius: 10px 10px 0 0;
+                ">
+                    <h2 id="chat-username" style="
+                        font-family: 'Georgia', serif;
+                        color: white;
+                        font-weight: 600;
+                        font-size: 1.3em;
+                        text-align: center;
+                        margin: 0;
+                    ">Chat Username</h2>
+                    <button id="close-chat" style="
+                        position: absolute;
+                        top: 50%;
+                        right: 15px;
+                        transform: translateY(-50%);
+                        background-color: #ff4d4d;
+                        color: white;
+                        border: none;
+                        border-radius: 50%;
+                        cursor: pointer;
+                        padding: 5px 8px;
+                        font-size: 16px;
+                        transition: background-color 0.3s;
+                        box-shadow: 0px 2px 6px rgba(0,0,0,0.15);
+                    ">×</button>
+                </div>
+                <div id="messages-container" style="
+                    padding: 15px;
+                    height: 250px;
+                    overflow-y: auto;
+                    background-color: #ffffff;
+                ">
+                    <!-- Messages will appear here -->
+                </div>
+                <div style="
+                    display: flex;
+                    padding: 10px;
+                    border-top: 1px solid #ddd;
+                    background-color: #f4f4f9;
+                ">
+                    <input type="text" id="message-input" placeholder="Type your message..." style="
+                        flex: 1;
+                        padding: 8px;
+                        border: 1px solid #ccc;
+                        border-radius: 5px;
+                        outline: none;
+                        font-size: 14px;
+                    ">
+                    <button id="send-message" style="
+                        margin-left: 10px;
+                        background-color: #4a76a8;
+                        color: white;
+                        padding: 8px 12px;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        transition: background-color 0.3s;
+                    ">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>    
 
-    <script>
-        document.getElementById("profileImage").addEventListener("click", function() {
-            var options = document.getElementById("profileOptions");
-            if (options.style.display === "none" || options.style.display === "") {
-                options.style.display = "block";
-            } else {
-                options.style.display = "none";
-            }
-        });
-        
-        document.addEventListener("click", function(event) {
-            var options = document.getElementById("profileOptions");
-            var profileImage = document.getElementById("profileImage");
-            if (event.target !== options && event.target !== profileImage) {
-                options.style.display = "none";
-            }
-        });
-        
-
-    </script>
-
-    <!-------------------------------- MAIN ----------------------------------->
+<script>
+    document.getElementById("profileImage").addEventListener("click", function() {
+        var options = document.getElementById("profileOptions");
+        if (options.style.display === "none" || options.style.display === "") {
+            options.style.display = "block";
+        } else {
+            options.style.display = "none";
+        }
+    });
+    
+    document.addEventListener("click", function(event) {
+        var options = document.getElementById("profileOptions");
+        var profileImage = document.getElementById("profileImage");
+        if (event.target !== options && event.target !== profileImage) {
+            options.style.display = "none";
+        }
+    });
     
 
-            <!----------------- MIDDLE -------------------->
-            <div class="middle">
-                <div class="feeds">
-                    <div class="feed">
-                        <div class="head">
-                            <div class="user">
-                            
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!----------------- END OF FEEDS -------------------->
-
-                
-                
-                
-            </div>
-             <!----------------- END OF MIDDLE -------------------->
-
-            <!----------------- RIGHT -------------------->
-            <div class="right">
-                <!------- MESSAGES ------->
-                <div class="messages">
-                    <div class="heading">
-                        <h4>Messages</h4>
-                        <i class="uil uil-edit"></i>
-                    </div>
-                    <div class="search-bar">
-                        <i class="uil uil-search"></i>
-                        <input type="search" placeholder="Search messages" id="message-search">
-                        <div id="suggestionsContainer1" class="suggestions-container"></div>
-                    </div>
-                    
-                
-                    <!------- MESSAGES CATEGORY ------->
-                    <div class="category">
-                        <h3 class="active">CHAT BOX</h3>
-                    </div>
-                    <!------- MESSAGES 
-                    <div class="message">
-                        <div class="profile-photo">
-                            <img id="profile-img" src="./images/social logo.png" alt="Profile Picture">
-                        </div>
-                        <div class="message-body">
-                            <h5 id="username">Loading...</h5>
-                        </div>
-                    </div> ------->
-                    <div id="selected-user" style="display: none;">
-                        <div class="profile-photo">
-                            <img id="selected-user-img" src="./images/social logo.png" alt="Profile Picture">
-                        </div>
-                        <div class="message-body">
-                            <h5 id="selected-user-name">Username</h5>
-                        </div>
-                        <button id="delete-convo-btn" class="delete-btn">Delete</button> <!-- Delete button -->
-                    </div>
-                    
-                    
-                    
-                    <div id="selected-users"><br></div> <!-- Selected users will appear here -->
-                    
-                    <div id="chat-interface" style="
-    display: none;
-    width: 350px; /* Default width for smaller screens */
-    background-color: #f4f4f9;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-">
-    <div id="chat-header" style="
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        position: relative;
-        background-color: #4a76a8;
-        padding: 15px;
-        border-radius: 10px 10px 0 0;
-    ">
-        <h2 id="chat-username" style="
-            font-family: 'Georgia', serif;
-            color: white;
-            font-weight: 600;
-            font-size: 1.3em;
-            text-align: center;
-            margin: 0;
-        ">
-            Chat Username
-        </h2>
-        <button id="close-chat" style="
-            position: absolute;
-            top: 50%;
-            right: 15px;
-            transform: translateY(-50%);
-            background-color: #ff4d4d;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            padding: 5px 8px;
-            font-size: 16px;
-            transition: background-color 0.3s;
-            box-shadow: 0px 2px 6px rgba(0,0,0,0.15);
-        ">
-            ×
-        </button>
-    </div>
-    <div id="messages-container" style="
-        padding: 15px;
-        height: 300px;
-        overflow-y: auto;
-        background-color: #ffffff;
-    ">
-        <!-- Messages will appear here -->
-    </div>
-    <div style="
-        display: flex;
-        padding: 10px;
-        border-top: 1px solid #ddd;
-        background-color: #f4f4f9;
-    ">
-        <input type="text" id="message-input" placeholder="Type your message..." style="
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            outline: none;
-            font-size: 14px;
-        ">
-        <button id="send-message" style="
-            margin-left: 10px;
-            background-color: #4a76a8;
-            color: white;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        ">
-            Send
-        </button>
-    </div>
-</div>
+</script>
 
                 <script type="module">
                     import { db } from "./firebase-config.js";
@@ -582,7 +541,7 @@
             const profilePhoto = document.createElement('div');
             profilePhoto.className = 'profile-photo';
             const img = document.createElement('img');
-            img.src = userData.profilePicUrl || './images/social logo.png';
+            img.src = userData.profilePicUrl || './images/profile-9.jpg';
             img.alt = "Profile Picture";
             profilePhoto.appendChild(img);
 
@@ -960,18 +919,7 @@ updateProfileOptions(); // Ensure it's also run on page load
 
 // ------------------------------------------------ Profile dropdown end ------------------------------------------------------ //
 
+</script>
 
-
-                </script>
-                
-            
-
-                <!------- END OF MESSAGES ------->
-
-                
-            </div>
-            <!----------------- END OF RIGHT -------------------->
-        </div>
-    </main>
 </body>
 </html>
