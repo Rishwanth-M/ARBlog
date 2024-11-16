@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-config.js';
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc, getDocs, runTransaction, addDoc, serverTimestamp, deleteDoc  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { collection, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc, getDocs, runTransaction, addDoc, serverTimestamp, deleteField,deleteDoc  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 // ------------------------------------------------ Profile dropdown Start ------------------------------------------------------ //
@@ -223,8 +223,6 @@ const unsubscribe = listenForUserUpdates(userId);
 
 // ------------------------------------------------ Posts Loading End ------------------------------------------------------ //
 
-// ------------------------------------------------ Posts Start ------------------------------------------------------ //
-
 function renderPost(doc, profilePicUrl) {
     const feedsContainer = document.querySelector('.feeds');
     if (feedsContainer) {
@@ -258,14 +256,14 @@ function renderPost(doc, profilePicUrl) {
                 </div>
                 <div class="action-buttons">
                     <div class="interaction-buttons">
-                        <span class="like-button">
+                        <span class="like-button" data-id="${doc.id}">
                             <i class="uil uil-heart"></i>
-                            <span class="like-count">${likes}</span>
+                        <span class="like-count">${likes}</span>
                         </span>
+
                         <span class="comment-icon">
                             <i class="uil uil-comment-dots"></i>
                         </span>
-                        <span><i class="uil uil-share-alt"></i></span>
                     </div>
                     <div class="bookmark">
                         <span><i class="uil uil-bookmark-full"></i></span>
@@ -286,8 +284,23 @@ function renderPost(doc, profilePicUrl) {
             deleteButton.style.display = deleteButton.style.display === 'none' ? 'block' : 'none';
         });
 
-        // Handle delete button click
         deleteButton.addEventListener('click', () => deletePost(doc.id, doc.data().ownerId));
+
+        // Add event listener for comment icon to toggle popup
+        const commentIcon = postElement.querySelector('.comment-icon');
+        commentIcon.addEventListener('click', () => {
+            const postId = doc.id;
+            const ownerId = doc.data().ownerId;
+            toggleCommentsPopup(postId, ownerId); // Call your popup function
+        });
+
+        // Add event listener for like button
+        const likeButton = postElement.querySelector('.like-button');
+        likeButton.addEventListener('click', async () => {
+            const postId = doc.id;
+            const ownerId = doc.data().ownerId;
+            await handleLike(postId, ownerId); // Call the handleLike function
+        });
     }
 }
 
@@ -311,52 +324,97 @@ function deletePost(postId, ownerId) {
 }
 
 
-// ------------------------------------------------ Posts Like Start ------------------------------------------------------ //
-
-// Function to handle like/unlike
-// Function to handle like/unlike
 async function handleLike(postId, ownerId) {
-    const likeButton = document.querySelector(`[data-id="${postId}"] .like-button`);
+    const likeButton = document.querySelector(`[data-id="${postId}"] .like-button`); // Get the like button by postId
     const likeCountElement = likeButton.querySelector('.like-count');
-    const userId = auth.currentUser.uid;
-
+    const userId = auth.currentUser.uid; // Get the current user's ID
+    
+    // Reference to the post document in Firestore
     const postRef = doc(db, 'users', ownerId, 'posts', postId);
+    const postDoc = await getDoc(postRef);
 
-    try {
-        await runTransaction(db, async (transaction) => {
-            const postDoc = await transaction.get(postRef);
-            if (!postDoc.exists()) throw new Error("Document does not exist!");
+    if (!postDoc.exists()) {
+        console.error('Post not found');
+        return;
+    }
 
-            const postData = postDoc.data();
-            const likedUsers = postData.likedUsers || [];
-            const isLiked = likedUsers.includes(userId);
-            let newLikeCount = postData.likes || 0;
+    const postData = postDoc.data();
+    const currentLikes = postData.likes || 0;
+    const likedUsers = postData.likedUsers || {};
 
-            // Update like status
-            if (isLiked) {
-                transaction.update(postRef, {
-                    likedUsers: likedUsers.filter(id => id !== userId),
-                    likes: newLikeCount - 1
-                });
-                newLikeCount--;
-            } else {
-                transaction.update(postRef, {
-                    likedUsers: [...likedUsers, userId],
-                    likes: newLikeCount + 1
-                });
-                newLikeCount++;
-            }
+    // Check if the user has already liked the post
+    const isLiked = likedUsers[userId] !== undefined;
 
-            // Update UI
-            likeCountElement.textContent = newLikeCount;
-            likeButton.classList.toggle('liked', !isLiked); // Toggle the 'liked' class based on like status
-        });
-    } catch (error) {
-        console.error('Error updating like status:', error);
+    if (isLiked) {
+        // If the user already liked the post, unlike it
+        likeCountElement.textContent = currentLikes - 1;
+        likeButton.classList.remove('liked'); // Update button appearance
+        await updateLikeCountInDatabase(postId, ownerId, currentLikes - 1, false);
+    } else {
+        // If the user has not liked the post, like it
+        likeCountElement.textContent = currentLikes + 1;
+        likeButton.classList.add('liked'); // Update button appearance
+        await updateLikeCountInDatabase(postId, ownerId, currentLikes + 1, true);
     }
 }
 
-// ------------------------------------------------ Posts Like End ------------------------------------------------------ //
+async function checkUserLikeStatus(postId, ownerId) {
+    const likeButton = document.querySelector(`[data-id="${postId}"] .like-button`); // Get the like button by postId
+    const likeCountElement = likeButton.querySelector('.like-count');
+    const userId = auth.currentUser.uid; // Get the current user's ID
+    
+    const postRef = doc(db, 'users', ownerId, 'posts', postId);
+    const postDoc = await getDoc(postRef);
+
+    if (!postDoc.exists()) {
+        console.error('Post not found');
+        return;
+    }
+
+    const postData = postDoc.data();
+    const currentLikes = postData.likes || 0;
+    const likedUsers = postData.likedUsers || {};
+
+    // Check if the user has liked the post
+    const isLiked = likedUsers[userId] !== undefined;
+
+    if (isLiked) {
+        // If the user has liked the post, mark the button as liked
+        likeButton.classList.add('liked');
+    } else {
+        // If the user has not liked the post, mark the button as not liked
+        likeButton.classList.remove('liked');
+    }
+
+    // Update the like count
+    likeCountElement.textContent = currentLikes;
+}
+
+async function updateLikeCountInDatabase(postId, ownerId, newLikeCount, isLiked) {
+    try {
+        const postRef = doc(db, 'users', ownerId, 'posts', postId);
+        const userId = auth.currentUser.uid; // Get the current user's ID
+        const timestamp = new Date();
+
+        // Update the like count and liked status for the user
+        await updateDoc(postRef, {
+            likes: newLikeCount, // Update like count
+            [`likedUsers.${userId}`]: isLiked ? timestamp : deleteField(), // Track if the user liked the post
+        });
+
+        console.log(`${isLiked ? 'Liked' : 'Unliked'} post ${postId} by user ${userId}`);
+    } catch (error) {
+        console.error('Error updating likes:', error);
+    }
+}
+
+// When the page loads or refreshes, check the like status for each post
+document.querySelectorAll('.like-button').forEach(button => {
+    const postId = button.dataset.id;  // Get the postId from the data-id attribute
+    const ownerId = button.dataset.ownerId;  // Get the ownerId for the post
+    checkUserLikeStatus(postId, ownerId);
+});
+
 
 // ------------------------------------------------ Posts Commenting Start ------------------------------------------------------ //
 
