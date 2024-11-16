@@ -802,18 +802,27 @@ document.addEventListener('DOMContentLoaded', function () {
     function addNotification(userName, action, profilePicUrl, timestamp, postId) {
         const notificationElement = document.createElement('div');
         notificationElement.className = 'notification-item'; // Added class for styling
-        const timeAgo = formatTime(timestamp); // Format the timestamp
+        let timeAgo = '';
+        
+        // Check if it's a following notification, and skip timestamp if it's a follow action
+        if (action === 'started following you') {
+            timeAgo = ''; // No timestamp for follow notifications
+        } else {
+            timeAgo = formatTime(timestamp); // Format the timestamp for other actions
+        }
+    
         notificationElement.innerHTML = `
             <div class="profile-photo">
                 <img src="${profilePicUrl || './images/social logo.png'}" alt="Profile Picture">
             </div>
             <div class="notification-body">
                 <b>${userName}</b> ${action}
-                <small class="text-muted">${timeAgo}</small>
+                ${timeAgo ? `<small class="text-muted">${timeAgo}</small>` : ''}
             </div>
         `;
         notificationsPopup.prepend(notificationElement);
     }
+    
 
     function formatTime(timestamp) {
         let date;
